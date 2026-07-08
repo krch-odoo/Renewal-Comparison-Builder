@@ -126,6 +126,7 @@
   /* ---------- Terms strip ---------- */
   .terms{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin-bottom:22px;}
   .terms .lead{color:var(--ink-soft);font-size:15px;margin-bottom:16px}
+  .terms-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.5;}
   .terms-grid{display:flex;gap:48px;flex-wrap:wrap;font-size:15px}
   .terms-grid .t-lbl{color:var(--muted)}
   .terms-grid b{color:var(--ink);font-weight:700}
@@ -285,6 +286,7 @@
       <div><span class="t-lbl">Annual escalation</span> <span class="orange" id="tEsc"></span></div>
       <div><span class="t-lbl">Payment terms</span> <b id="tTerms"></b></div>
     </div>
+    <div class="terms-note" id="termsNote"></div>
   </div>
 
   <div class="fine" id="fine"></div>
@@ -580,10 +582,13 @@
       $("termsLead").textContent="Same license rate today. A longer term holds that rate through the contract and defers the "+escPct+"% annual escalation to renewal.";
       $("tEsc").className="orange"; $("tEsc").textContent="+"+escPct+"% / year";
       $("tPUM").textContent=money(users>0?netAnnualLegacy/users/12:0);
+      $("termsNote").textContent="A multi-year term holds today's rate for the full contract; it does not eliminate the "+escPct+"% annual escalation. At renewal the rate catches up to the accumulated escalation over the term or the prevailing list price, whichever is lower.";
+      $("termsNote").style.display="block";
     }else{
       $("termsLead").textContent="At list pricing. A longer term earns a larger multi-year license discount.";
       $("tEsc").className="green"; $("tEsc").textContent="None (list pricing)";
       $("tPUM").textContent=money(list/12);
+      $("termsNote").style.display="none";
     }
     $("tTerms").textContent=inp("terms").value;
 
