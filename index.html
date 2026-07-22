@@ -126,7 +126,6 @@
   /* ---------- Terms strip ---------- */
   .terms{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin-bottom:22px;}
   .terms .lead{color:var(--ink-soft);font-size:15px;margin-bottom:16px}
-  .terms-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.5;}
   .terms-grid{display:flex;gap:48px;flex-wrap:wrap;font-size:15px}
   .terms-grid .t-lbl{color:var(--muted)}
   .terms-grid b{color:var(--ink);font-weight:700}
@@ -140,10 +139,10 @@
   .host-fields{grid-column:1/-1;padding:14px 16px;border:1px dashed var(--input-border);border-radius:10px;background:var(--surface-2)}
   .host-fields.hidden{display:none}
   .host-fields .hf-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--purple-light);font-weight:600;margin-bottom:12px}
-  .host-fields .hf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;max-width:660px}
+  .host-fields .hf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px;max-width:820px}
   .compare-note{font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400}
   .terms-grid .green{color:var(--green);font-weight:700}
-  @media(max-width:520px){.host-fields .hf-grid{grid-template-columns:1fr}}
+  @media(max-width:820px){.host-fields .hf-grid{grid-template-columns:1fr}}
   .plan.current{border-color:var(--gold)}
   .pill.current{background:var(--gold-pale);color:var(--gold);border-color:rgba(183,121,31,.4)}
   .cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
@@ -207,7 +206,7 @@
       </div>
       <div class="field">
         <label>Current monthly rate / user / mo</label>
-        <input type="number" id="in_mrate" value="73.20" step="0.01" placeholder="73.20">
+        <input type="number" id="in_mrate" value="" step="0.01" placeholder="76.20">
         <span class="hint">Used only when the monthly baseline is on</span>
       </div>
       <div class="field">
@@ -234,14 +233,17 @@
         </select>
       </div>
       <div class="host-fields hidden" id="hostFields">
-        <div class="hf-title">Odoo.sh hosting &middot; annual rates, scaled by contract term</div>
+        <div class="hf-title">Odoo.sh hosting &middot; yearly rates apply to term plans, monthly rates to the current-monthly baseline</div>
         <div class="hf-grid">
           <div class="field"><label>Storage (GB)</label><input type="number" id="in_gb_qty" value="" step="1" placeholder="0"></div>
           <div class="field"><label>Storage $ / GB / yr</label><input type="number" id="in_gb_price" value="2.40" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Storage $ / GB / mo</label><input type="number" id="in_gb_mprice" value="0.25" step="0.01" placeholder="0.00"></div>
           <div class="field"><label>Staging branches</label><input type="number" id="in_stg_qty" value="" step="1" placeholder="0"></div>
           <div class="field"><label>Staging $ / branch / yr</label><input type="number" id="in_stg_price" value="172.80" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Staging $ / branch / mo</label><input type="number" id="in_stg_mprice" value="18" step="0.01" placeholder="0.00"></div>
           <div class="field"><label>Workers</label><input type="number" id="in_wrk_qty" value="" step="1" placeholder="0"></div>
           <div class="field"><label>Worker $ / worker / yr</label><input type="number" id="in_wrk_price" value="691.20" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Worker $ / worker / mo</label><input type="number" id="in_wrk_mprice" value="72" step="0.01" placeholder="0.00"></div>
         </div>
       </div>
       <div class="field"><label>SO # (1-year)</label><input type="text" id="in_so1" value="" placeholder="SO2026/"></div>
@@ -286,7 +288,6 @@
       <div><span class="t-lbl">Annual escalation</span> <span class="orange" id="tEsc"></span></div>
       <div><span class="t-lbl">Payment terms</span> <b id="tTerms"></b></div>
     </div>
-    <div class="terms-note" id="termsNote"></div>
   </div>
 
   <div class="fine" id="fine"></div>
@@ -302,11 +303,11 @@
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
   var textIds=["cust","users","list","comp","esc","mrate","eff","exp","terms",
-    "gb_qty","gb_price","stg_qty","stg_price","wrk_qty","wrk_price",
+    "gb_qty","gb_price","gb_mprice","stg_qty","stg_price","stg_mprice","wrk_qty","wrk_price","wrk_mprice",
     "so1","so2","so3","so4","so5","tax"];
-  var defaults={cust:"",users:"6",list:"732.00",comp:"",esc:"7",mrate:"73.20",eff:todayISO(),exp:todayISO(),
+  var defaults={cust:"",users:"6",list:"732.00",comp:"",esc:"7",mrate:"",eff:todayISO(),exp:todayISO(),
     terms:"50% down \u00b7 50% net 30",
-    gb_qty:"",gb_price:"2.40",stg_qty:"",stg_price:"172.80",wrk_qty:"",wrk_price:"691.20",
+    gb_qty:"",gb_price:"2.40",gb_mprice:"0.25",stg_qty:"",stg_price:"172.80",stg_mprice:"18",wrk_qty:"",wrk_price:"691.20",wrk_mprice:"72",
     so1:"",so2:"",so3:"",so4:"",so5:"",tax:"0.00"};
   var defaultTerms=[2,3];
   var MY_DISC={1:0,2:0.05,3:0.10,4:0.125,5:0.15};
@@ -394,8 +395,8 @@
       if(!locked) ex+='<div class="row at-risk"><span class="lbl">Longer term earns a larger discount</span><span class="val"></span></div>';
     }
 
-    var projLabel = "License \u00b7 "+H+"-yr "+(locked?"total":"projected");
-    var projAmt = licProjected(T,H,ctx);
+    var projLabel = H+"-yr "+(locked?"total":"projected")+" (all-in)";
+    var projAmt = licProjected(T,H,ctx)+host*H;
 
     var html=''
       +'<div class="badges">'+badges+'</div>'
@@ -422,17 +423,17 @@
   }
 
   function buildMonthlyCard(H,ctx,mrate){
-    var users=ctx.users, host=ctx.hostAnnual, sh=ctx.sh;
-    var licAnnual=mrate*users*12, netAnnual=licAnnual+host, moBillAll=(licAnnual+host)/12;
+    var users=ctx.users, sh=ctx.sh, hostMo=ctx.hostAnnualMo;
+    var licAnnual=mrate*users*12, netAnnual=licAnnual+hostMo, moBillAll=(licAnnual+hostMo)/12;
     var badges='<span class="pill current">Monthly plan</span><span class="pill">Current</span>';
     var hostSection="";
-    if(sh && host>0){
+    if(sh && hostMo>0){
       var hr="";
-      if(ctx.gbQty>0 && ctx.gbPrice>0)   hr+='<div class="row"><span class="lbl dim">Storage \u2013 '+ctx.gbQty+' GB @ '+money(ctx.gbPrice)+'/yr</span><span class="val">'+money(ctx.gbQty*ctx.gbPrice)+'</span></div>';
-      if(ctx.stgQty>0 && ctx.stgPrice>0) hr+='<div class="row"><span class="lbl dim">Staging branches \u2013 '+ctx.stgQty+' @ '+money(ctx.stgPrice)+'/yr</span><span class="val">'+money(ctx.stgQty*ctx.stgPrice)+'</span></div>';
-      if(ctx.wrkQty>0 && ctx.wrkPrice>0) hr+='<div class="row"><span class="lbl dim">Workers \u2013 '+ctx.wrkQty+' @ '+money(ctx.wrkPrice)+'/yr</span><span class="val">'+money(ctx.wrkQty*ctx.wrkPrice)+'</span></div>';
-      hostSection='<div class="hr"></div><div class="sect-title">Hosting (Odoo.sh)</div>'+hr
-        +'<div class="row total"><span class="lbl">Hosting / yr</span><span class="val">'+money(host)+'</span></div>';
+      if(ctx.gbQty>0 && ctx.gbMo>0)   hr+='<div class="row"><span class="lbl dim">Storage \u2013 '+ctx.gbQty+' GB @ '+money(ctx.gbMo)+'/mo</span><span class="val">'+money(ctx.gbQty*ctx.gbMo)+'/mo</span></div>';
+      if(ctx.stgQty>0 && ctx.stgMo>0) hr+='<div class="row"><span class="lbl dim">Staging branches \u2013 '+ctx.stgQty+' @ '+money(ctx.stgMo)+'/mo</span><span class="val">'+money(ctx.stgQty*ctx.stgMo)+'/mo</span></div>';
+      if(ctx.wrkQty>0 && ctx.wrkMo>0) hr+='<div class="row"><span class="lbl dim">Workers \u2013 '+ctx.wrkQty+' @ '+money(ctx.wrkMo)+'/mo</span><span class="val">'+money(ctx.wrkQty*ctx.wrkMo)+'/mo</span></div>';
+      hostSection='<div class="hr"></div><div class="sect-title">Hosting (Odoo.sh, monthly rate)</div>'+hr
+        +'<div class="row total"><span class="lbl">Hosting / yr (\u00d7 12)</span><span class="val">'+money(hostMo)+'</span></div>';
     }
     var html=''
       +'<div class="badges">'+badges+'</div>'
@@ -450,7 +451,7 @@
       +'<div class="sect-title">Rate exposure</div>'
       +'<div class="row at-risk"><span class="lbl">Month-to-month, no commitment</span><span class="val"></span></div>'
       +'<div class="row at-risk"><span class="lbl">No rate lock \u2013 subject to change</span><span class="val"></span></div>'
-      +'<div class="row projected"><span class="lbl">License \u00b7 '+H+'-yr at monthly</span><span class="val">'+money(licAnnual*H)+'</span></div>';
+      +'<div class="row projected"><span class="lbl">'+H+'-yr projected (all-in)</span><span class="val">'+money(netAnnual*H)+'</span></div>';
     var div=document.createElement("div");
     div.className="plan current";
     div.innerHTML=html;
@@ -475,7 +476,9 @@
 
     var sh = inp("hosting").value==="sh";
     var gbQty=num("gb_qty"),gbPrice=num("gb_price"),stgQty=num("stg_qty"),stgPrice=num("stg_price"),wrkQty=num("wrk_qty"),wrkPrice=num("wrk_price");
+    var gbMo=num("gb_mprice"),stgMo=num("stg_mprice"),wrkMo=num("wrk_mprice");
     var hostAnnual = sh ? (gbQty*gbPrice+stgQty*stgPrice+wrkQty*wrkPrice) : 0;
+    var hostAnnualMo = sh ? 12*(gbQty*gbMo+stgQty*stgMo+wrkQty*wrkMo) : 0;
 
     $("hostFields").classList.toggle("hidden",!sh);
     inp("esc").disabled = (mode!=="legacy");
@@ -495,7 +498,8 @@
 
     var ctx={mode:mode,users:users,list:list,listAnnual:listAnnual,comp:comp,showComp:showComp,esc:esc,escPct:escPct,
       effStr:effStr,lockDate:lockDate,sh:sh,hostAnnual:hostAnnual,
-      gbQty:gbQty,gbPrice:gbPrice,stgQty:stgQty,stgPrice:stgPrice,wrkQty:wrkQty,wrkPrice:wrkPrice};
+      gbQty:gbQty,gbPrice:gbPrice,stgQty:stgQty,stgPrice:stgPrice,wrkQty:wrkQty,wrkPrice:wrkPrice,
+      gbMo:gbMo,stgMo:stgMo,wrkMo:wrkMo,hostAnnualMo:hostAnnualMo};
 
     var monthlyOn=$("monthlyToggle").checked;
     var mrate=num("mrate");
@@ -520,14 +524,14 @@
         +"At current list pricing there is no annual escalation. Committing to a multi-year term discounts your license cost, from 5% at 2 years up to 15% at 5 years.";
     }
     if(monthlyOn){
-      var flipSave=monthlyLicAnnual*H-licProjected(H,H,ctx);
+      var flipSave=(monthlyLicAnnual+hostAnnualMo)*H-(licProjected(H,H,ctx)+hostAnnual*H);
       $("callout").innerHTML="<b>Flipping off month-to-month billing saves "+money(flipSave)+" over "+H+" year"+(H>1?"s":"")+".</b> "+$("callout").innerHTML;
     }
 
-    var note = (sh&&hostAnnual>0) ? " <span class='compare-note'>(license only; Odoo.sh hosting is identical across terms)</span>" : "";
-    $("compareHead").innerHTML=H+"-year license cost \u00b7 what you'd actually pay"+note;
-    var projByTerm=terms.map(function(T){return licProjected(T,H,ctx);});
-    var monthlyProjH=monthlyLicAnnual*H;
+    var note = (sh&&(hostAnnual>0||hostAnnualMo>0)) ? " <span class='compare-note'>(includes Odoo.sh hosting)</span>" : "";
+    $("compareHead").innerHTML=H+"-year total cost \u00b7 what you'd actually pay"+note;
+    var projByTerm=terms.map(function(T){return licProjected(T,H,ctx)+hostAnnual*H;});
+    var monthlyProjH=(monthlyLicAnnual+hostAnnualMo)*H;
     var maxProj=Math.max.apply(null,projByTerm.concat(monthlyOn?[monthlyProjH]:[]))||1;
     var barsHtml="";
     if(monthlyOn){
@@ -561,7 +565,7 @@
       $("mRate").textContent=money(list)+" / user / yr";
     }
     if(monthlyOn){
-      var savings=monthlyLicAnnual*H-licProjected(H,H,ctx);
+      var savings=monthlyProjH-(licProjected(H,H,ctx)+hostAnnual*H);
       $("mSave").textContent=money(savings);
       $("mSaveLbl").textContent="Savings vs staying monthly ("+H+"-yr)";
     }else if(terms.length>=2){
@@ -582,13 +586,10 @@
       $("termsLead").textContent="Same license rate today. A longer term holds that rate through the contract and defers the "+escPct+"% annual escalation to renewal.";
       $("tEsc").className="orange"; $("tEsc").textContent="+"+escPct+"% / year";
       $("tPUM").textContent=money(users>0?netAnnualLegacy/users/12:0);
-      $("termsNote").textContent="A multi-year term holds today's rate for the full contract; it does not eliminate the "+escPct+"% annual escalation. At renewal the rate catches up to the accumulated escalation over the term or the prevailing list price, whichever is lower.";
-      $("termsNote").style.display="block";
     }else{
       $("termsLead").textContent="At list pricing. A longer term earns a larger multi-year license discount.";
       $("tEsc").className="green"; $("tEsc").textContent="None (list pricing)";
       $("tPUM").textContent=money(list/12);
-      $("termsNote").style.display="none";
     }
     $("tTerms").textContent=inp("terms").value;
 
@@ -605,7 +606,10 @@
   textIds.forEach(function(k){inp(k).addEventListener("input",render);});
   inp("terms").addEventListener("change",render);
   inp("hosting").addEventListener("change",render);
-  $("monthlyToggle").addEventListener("change",render);
+  $("monthlyToggle").addEventListener("change",function(){
+    if(this.checked && inp("mrate").value.trim()==="") inp("mrate").value="76.20";
+    render();
+  });
   document.querySelectorAll("#termPicker input").forEach(function(cb){cb.addEventListener("change",render);});
 
   $("sendBtn").addEventListener("click",function(){
