@@ -246,6 +246,13 @@
           <div class="field"><label>Worker $ / worker / mo</label><input type="number" id="in_wrk_mprice" value="72" step="0.01" placeholder="0.00"></div>
         </div>
       </div>
+      <div class="host-fields" id="maintFields">
+        <div class="hf-title">Custom code maintenance (optional) &middot; $216 / yr ($18 / mo) per 100 lines of code</div>
+        <div class="hf-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));max-width:540px">
+          <div class="field"><label>Maintenance (100 LoC units)</label><input type="number" id="in_maint_qty" value="" step="1" placeholder="0"></div>
+          <div class="field"><label>$ / 100 LoC / yr</label><input type="number" id="in_maint_rate" value="216" step="0.01" placeholder="216"></div>
+        </div>
+      </div>
       <div class="field"><label>SO # (1-year)</label><input type="text" id="in_so1" value="" placeholder="SO2026/"></div>
       <div class="field"><label>SO # (2-year)</label><input type="text" id="in_so2" value="" placeholder="SO2026/"></div>
       <div class="field"><label>SO # (3-year)</label><input type="text" id="in_so3" value="" placeholder="SO2026/"></div>
@@ -303,11 +310,11 @@
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
   var textIds=["cust","users","list","comp","esc","mrate","eff","exp","terms",
-    "gb_qty","gb_price","gb_mprice","stg_qty","stg_price","stg_mprice","wrk_qty","wrk_price","wrk_mprice",
+    "gb_qty","gb_price","gb_mprice","stg_qty","stg_price","stg_mprice","wrk_qty","wrk_price","wrk_mprice","maint_qty","maint_rate",
     "so1","so2","so3","so4","so5","tax"];
   var defaults={cust:"",users:"6",list:"732.00",comp:"",esc:"7",mrate:"",eff:todayISO(),exp:todayISO(),
     terms:"50% down \u00b7 50% net 30",
-    gb_qty:"",gb_price:"2.40",gb_mprice:"0.25",stg_qty:"",stg_price:"172.80",stg_mprice:"18",wrk_qty:"",wrk_price:"691.20",wrk_mprice:"72",
+    gb_qty:"",gb_price:"2.40",gb_mprice:"0.25",stg_qty:"",stg_price:"172.80",stg_mprice:"18",wrk_qty:"",wrk_price:"691.20",wrk_mprice:"72",maint_qty:"",maint_rate:"216",
     so1:"",so2:"",so3:"",so4:"",so5:"",tax:"0.00"};
   var defaultTerms=[2,3];
   var MY_DISC={1:0,2:0.05,3:0.10,4:0.125,5:0.15};
@@ -343,7 +350,7 @@
   function buildCard(T,H,ctx){
     var users=ctx.users, listAnnual=ctx.listAnnual, escPct=ctx.escPct, host=ctx.hostAnnual, sh=ctx.sh;
     var isMax=(T===H), locked=(T>=H);
-    var licNet=licNetAnnual(T,ctx), licTerm=licNet*T, hostTerm=host*T, netTotal=licTerm+hostTerm;
+    var licNet=licNetAnnual(T,ctx), licTerm=licNet*T, hostTerm=host*T, maint=ctx.maintAnnual, maintTerm=maint*T, netTotal=licTerm+hostTerm+maintTerm;
     var pum=users>0?licNet/users/12:0;
     var lockDateT=lockThrough(ctx.effStr,T);
 
@@ -372,6 +379,11 @@
       hostSection='<div class="hr"></div><div class="sect-title">Hosting (Odoo.sh)</div>'+hr
         +'<div class="row total"><span class="lbl">Hosting subtotal</span><span class="val">'+money(hostTerm)+'</span></div>';
     }
+    var maintSection="";
+    if(maint>0){
+      maintSection='<div class="hr"></div><div class="sect-title">Custom code maintenance</div>'
+        +'<div class="row"><span class="lbl dim">'+ctx.maintQty+' \u00d7 100 LoC @ '+money(ctx.maintRate)+'/yr</span><span class="val">'+money(maintTerm)+'</span></div>';
+    }
 
     var ex="";
     if(ctx.mode==="legacy"){
@@ -396,7 +408,7 @@
     }
 
     var projLabel = H+"-yr "+(locked?"total":"projected")+" (all-in)";
-    var projAmt = licProjected(T,H,ctx)+host*H;
+    var projAmt = licProjected(T,H,ctx)+host*H+maint*H;
 
     var html=''
       +'<div class="badges">'+badges+'</div>'
@@ -409,6 +421,7 @@
       +discRow
       +'<div class="row total"><span class="lbl">License subtotal</span><span class="val">'+money(licTerm)+'</span></div>'
       +hostSection
+      +maintSection
       +'<div class="hr"></div>'
       +'<div class="row total"><span class="lbl">Net total</span><span class="val">'+money(netTotal)+'</span></div>'
       +'<div class="hr"></div>'
@@ -423,8 +436,8 @@
   }
 
   function buildMonthlyCard(H,ctx,mrate){
-    var users=ctx.users, sh=ctx.sh, hostMo=ctx.hostAnnualMo;
-    var licAnnual=mrate*users*12, netAnnual=licAnnual+hostMo, moBillAll=(licAnnual+hostMo)/12;
+    var users=ctx.users, sh=ctx.sh, hostMo=ctx.hostAnnualMo, maint=ctx.maintAnnual;
+    var licAnnual=mrate*users*12, netAnnual=licAnnual+hostMo+maint, moBillAll=(licAnnual+hostMo+maint)/12;
     var badges='<span class="pill current">Monthly plan</span><span class="pill">Current</span>';
     var hostSection="";
     if(sh && hostMo>0){
@@ -434,6 +447,12 @@
       if(ctx.wrkQty>0 && ctx.wrkMo>0) hr+='<div class="row"><span class="lbl dim">Workers \u2013 '+ctx.wrkQty+' @ '+money(ctx.wrkMo)+'/mo</span><span class="val">'+money(ctx.wrkQty*ctx.wrkMo)+'/mo</span></div>';
       hostSection='<div class="hr"></div><div class="sect-title">Hosting (Odoo.sh, monthly rate)</div>'+hr
         +'<div class="row total"><span class="lbl">Hosting / yr (\u00d7 12)</span><span class="val">'+money(hostMo)+'</span></div>';
+    }
+    var maintSection="";
+    if(maint>0){
+      maintSection='<div class="hr"></div><div class="sect-title">Custom code maintenance</div>'
+        +'<div class="row"><span class="lbl dim">'+ctx.maintQty+' \u00d7 100 LoC @ '+money(ctx.maintRate/12)+'/mo</span><span class="val">'+money(maint/12)+'/mo</span></div>'
+        +'<div class="row total"><span class="lbl">Maintenance / yr</span><span class="val">'+money(maint)+'</span></div>';
     }
     var html=''
       +'<div class="badges">'+badges+'</div>'
@@ -445,6 +464,7 @@
       +'<div class="row"><span class="lbl dim">'+users+' users @ '+money(mrate)+' / user / mo</span><span class="val">'+money(mrate*users)+'/mo</span></div>'
       +'<div class="row total"><span class="lbl">License / yr (\u00d7 12)</span><span class="val">'+money(licAnnual)+'</span></div>'
       +hostSection
+      +maintSection
       +'<div class="hr"></div>'
       +'<div class="row total"><span class="lbl">Net total / yr</span><span class="val">'+money(netAnnual)+'</span></div>'
       +'<div class="hr"></div>'
@@ -479,6 +499,8 @@
     var gbMo=num("gb_mprice"),stgMo=num("stg_mprice"),wrkMo=num("wrk_mprice");
     var hostAnnual = sh ? (gbQty*gbPrice+stgQty*stgPrice+wrkQty*wrkPrice) : 0;
     var hostAnnualMo = sh ? 12*(gbQty*gbMo+stgQty*stgMo+wrkQty*wrkMo) : 0;
+    var maintQty=num("maint_qty"),maintRate=num("maint_rate");
+    var maintAnnual=(maintQty>0&&maintRate>0)?maintQty*maintRate:0;
 
     $("hostFields").classList.toggle("hidden",!sh);
     inp("esc").disabled = (mode!=="legacy");
@@ -499,7 +521,8 @@
     var ctx={mode:mode,users:users,list:list,listAnnual:listAnnual,comp:comp,showComp:showComp,esc:esc,escPct:escPct,
       effStr:effStr,lockDate:lockDate,sh:sh,hostAnnual:hostAnnual,
       gbQty:gbQty,gbPrice:gbPrice,stgQty:stgQty,stgPrice:stgPrice,wrkQty:wrkQty,wrkPrice:wrkPrice,
-      gbMo:gbMo,stgMo:stgMo,wrkMo:wrkMo,hostAnnualMo:hostAnnualMo};
+      gbMo:gbMo,stgMo:stgMo,wrkMo:wrkMo,hostAnnualMo:hostAnnualMo,
+      maintAnnual:maintAnnual,maintQty:maintQty,maintRate:maintRate};
 
     var monthlyOn=$("monthlyToggle").checked;
     var mrate=num("mrate");
@@ -528,10 +551,13 @@
       $("callout").innerHTML="<b>Flipping off month-to-month billing saves "+money(flipSave)+" over "+H+" year"+(H>1?"s":"")+".</b> "+$("callout").innerHTML;
     }
 
-    var note = (sh&&(hostAnnual>0||hostAnnualMo>0)) ? " <span class='compare-note'>(includes Odoo.sh hosting)</span>" : "";
+    var addons=[];
+    if(sh&&(hostAnnual>0||hostAnnualMo>0)) addons.push("Odoo.sh hosting");
+    if(maintAnnual>0) addons.push("maintenance");
+    var note = addons.length ? " <span class='compare-note'>(includes "+addons.join(" and ")+")</span>" : "";
     $("compareHead").innerHTML=H+"-year total cost \u00b7 what you'd actually pay"+note;
-    var projByTerm=terms.map(function(T){return licProjected(T,H,ctx)+hostAnnual*H;});
-    var monthlyProjH=(monthlyLicAnnual+hostAnnualMo)*H;
+    var projByTerm=terms.map(function(T){return licProjected(T,H,ctx)+hostAnnual*H+maintAnnual*H;});
+    var monthlyProjH=(monthlyLicAnnual+hostAnnualMo+maintAnnual)*H;
     var maxProj=Math.max.apply(null,projByTerm.concat(monthlyOn?[monthlyProjH]:[]))||1;
     var barsHtml="";
     if(monthlyOn){
@@ -565,7 +591,7 @@
       $("mRate").textContent=money(list)+" / user / yr";
     }
     if(monthlyOn){
-      var savings=monthlyProjH-(licProjected(H,H,ctx)+hostAnnual*H);
+      var savings=monthlyProjH-(licProjected(H,H,ctx)+hostAnnual*H+maintAnnual*H);
       $("mSave").textContent=money(savings);
       $("mSaveLbl").textContent="Savings vs staying monthly ("+H+"-yr)";
     }else if(terms.length>=2){
